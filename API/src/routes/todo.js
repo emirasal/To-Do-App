@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllByEmail, add, deleteById, editById, downloadFile, search, getAllTags } from '../controllers/todo.js';
+import { getAllByEmail, add, deleteById, editById, downloadFile, search, getAllTags, getByTag } from '../controllers/todo.js';
 import { verifyToken } from '../middleware/jwt.js';
 import upload from '../middleware/upload.js';
 
@@ -15,5 +15,6 @@ router.put('/editById', editById);
 router.get('/downloadFile/:fileName', downloadFile);
 router.get('/search/:key', search);
 router.get('/getAllTags', getAllTags);
+router.get('/getByTag/:tag', getByTag);
 
 export default router;

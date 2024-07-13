@@ -71,11 +71,15 @@ export const deleteById = async (req, res, next) => {
 
 export const editById = async (req, res, next) => {
   const { _id, newTodo } = req.body;
-
+  
   try {
     const updatedTodo = await Todo.findOneAndUpdate(
       { _id: _id },
-      { $set: { todo: newTodo } },
+      { $set: { 
+          todo: newTodo.todo,
+          tag: newTodo.tag
+        } 
+      },
       { new: true }
     );
 
@@ -120,9 +124,18 @@ export const search = async (req, res, next) => {
 
 export const getAllTags = async (req, res, next) => {
   try {
-    // Use distinct to get all unique tags
     const tags = await Todo.distinct("tag");
     res.status(200).json(tags);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getByTag = async (req, res, next) => {
+  const { tag } = req.params;
+  try {
+    const todos = await Todo.find({ tag: tag });
+    res.status(200).json(todos);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

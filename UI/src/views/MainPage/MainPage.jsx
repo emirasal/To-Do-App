@@ -33,9 +33,20 @@ const MainPage = () => {
     }
   };
 
-  const handleTagClick = (tag) => {
-    setSelectedTag(tag === selectedTag ? null : tag);
-    // You might want to add logic here to filter the parameters based on the selected tag
+  const handleTagClick = async (tag) => {
+    if (tag === selectedTag) {
+      // Deselect the tag and fetch all parameters
+      setSelectedTag(null);
+      fetchParameters();
+    } else {
+      setSelectedTag(tag);
+      try {
+        const response = await axios.get(`http://localhost:8000/api/todo/getByTag/${tag}`);
+        setParameters(response.data);
+      } catch (error) {
+        console.error('Error fetching parameters by tag:', error);
+      }
+    }
   };
 
   const handleSearch = async () => {
@@ -81,7 +92,7 @@ const MainPage = () => {
     }
   };
 
-  const deleteParameter = async parameter => {
+  const deleteParameter = async (parameter) => {
     try {
       await axios.delete('http://localhost:8000/api/todo/deleteById', {
         data: {
@@ -94,7 +105,7 @@ const MainPage = () => {
     }
   };
 
-  const editParameter = parameter => {
+  const editParameter = (parameter) => {
     console.log(parameter);
     setEditMode(parameter._id);
     setParameters(parameters.map(p =>
@@ -108,7 +119,7 @@ const MainPage = () => {
     ));
   };
 
-  const submitEditParameter = async parameter => {
+  const submitEditParameter = async (parameter) => {
     try {
       const updatedParam = {
         _id: parameter._id,
@@ -119,6 +130,7 @@ const MainPage = () => {
       };
       await axios.put(`http://localhost:8000/api/todo/editById`, updatedParam);
       setEditMode(null);
+      await fetchTags();
       await fetchParameters();
     } catch (error) {
       console.error('Error updating parameter:', error);
@@ -325,7 +337,7 @@ const MainPage = () => {
           </table>
         </div>
       </div>
-    </div>   //test
+    </div>
   );
 };
 
