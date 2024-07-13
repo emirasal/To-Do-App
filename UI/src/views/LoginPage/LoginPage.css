@@ -1,0 +1,78 @@
+.signin-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+  }
+  
+  .signin-box {
+    background-color: #2d2d44;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    width: 300px;
+    text-align: center;
+  }
+  
+  .logo {
+    width: 160px;
+    margin-bottom: 1.5rem;
+  }
+  
+  h1 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #b0b0d1;
+  }
+  
+  input[type="text"],
+  input[type="password"] {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 1rem;
+    border: 1px solid #b0b0d1;
+    border-radius: 5px;
+    background-color: #3c3c55;
+    color: #eaeaea;
+    transition: border-color 0.3s ease, border-width 0.3s ease;
+  }
+  
+
+  input::placeholder {
+    color: #b0b0d1;
+  }
+  
+  .signin-button {
+    width: calc(100% - 20px);
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: linear-gradient(45deg, #6a11cb, #2575fc);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .signin-button:hover {
+    background: linear-gradient(45deg, #6a11cb, #1e6cef);
+  }
+  
+  .error {
+    color: #f0f0f0;
+    margin-bottom: 1rem;
+  }
+  
+  footer {
+    margin-top: 2rem;
+    color: black;
+  }
+
+  .register-link, .login-link {
+    color: #7494F9;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  

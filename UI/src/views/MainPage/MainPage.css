@@ -1,0 +1,193 @@
+/* MainPage.css */
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f0f0f0;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.site-logo {
+  width: 200px;
+  height: auto;
+}
+
+.user-icon {
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.dropdown {
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  background-color: #2d2d44;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+}
+
+.dropdown button {
+  background: none;
+  border: 1px solid #6a11cb;
+  border-radius: 5px;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.dropdown button:hover {
+  background: #6a11cb;
+}
+
+.content {
+  width: 100%;
+  padding: 100px 20px 20px;
+  box-sizing: border-box;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  width: 23%;
+  max-width: 90%;
+  margin: 0 auto 20px;
+}
+
+.search-input {
+  width: 50%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #444;
+  border-radius: 5px 0 0 5px;
+  background-color: #282c34;
+  color: #fff;
+  margin-top: 17px;
+}
+
+.search-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #d38123;
+  color: white;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-left: 5px;
+}
+
+.parameter-container,
+.new-parameter-container {
+  width: 100%;
+  max-width: 90%;
+  margin: 0 auto 20px;
+  background-color: #1e1e2f;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.parameter-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+  table-layout: fixed;
+}
+
+.parameter-table th, .parameter-table td {
+  padding: 10px;
+  border: 1px solid #333;
+  text-align: left;
+}
+
+.parameter-table th {
+  background-color: #282c34;
+}
+
+.parameter-table th.parameter-thumbnail,
+.parameter-table td.parameter-thumbnail,
+.parameter-table th.parameter-file,
+.parameter-table td.parameter-file,
+.parameter-table th.parameter-actions,
+.parameter-table td.parameter-actions {
+  width: 15%;
+}
+
+.parameter-table th.parameter-key,
+.parameter-table td.parameter-key {
+  width: 55%;
+}
+
+.parameter-table input[type="text"],
+.parameter-table input[type="file"] {
+  width: 95%;
+  padding: 5px;
+  background-color: #282c34;
+  border: 1px solid #444;
+  color: #fff;
+  border-radius: 3px;
+}
+
+.edit-button, .delete-button, .add-parameter-button, .submit-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin: 0 2px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.delete-button {
+  background-color: #dc3545;
+}
+
+.add-parameter-button {
+  background-color: #28a745;
+  width: 40%;
+  display: block;
+  margin: 0 auto;
+}
+
+.submit-button {
+  background-color: #28a745;
+  display: block;
+  margin: 0 auto;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.download-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 2px 5px;
+  margin-left: 5px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+}
