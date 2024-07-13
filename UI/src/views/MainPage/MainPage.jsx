@@ -1,5 +1,3 @@
-// MainPage.jsx
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './MainPage.css';
@@ -7,15 +5,16 @@ import './MainPage.css';
 const MainPage = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [parameters, setParameters] = useState([]);
-  const [newParameter, setNewParameter] = useState({ todo: '', file: null, thumbnail: null });
+  const [newParameter, setNewParameter] = useState({ todo: '', file: null, thumbnail: null, tag: '' });
   const [editMode, setEditMode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [imageBaseUrl, setImageBaseUrl] = useState('http://localhost:8000/api/todo/downloadFile/');
-
+  const [tags, setTags] = useState([]);
+  const [selectedTag, setSelectedTag] = useState(null);
 
   const fetchParameters = async () => {
     try {
-      let currentUser = localStorage.getItem('currentUser'); 
+      let currentUser = localStorage.getItem('currentUser');
       currentUser = currentUser.replace(/"/g, '');
       const response = await axios.get(`http://localhost:8000/api/todo/getAllByEmail/${currentUser}`);
       console.log('Fetched parameters:', response.data);
@@ -25,7 +24,21 @@ const MainPage = () => {
     }
   };
 
-  const searchParameters = async () => {
+  const fetchTags = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/api/todo/getAllTags');
+      setTags(response.data);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  };
+
+  const handleTagClick = (tag) => {
+    setSelectedTag(tag === selectedTag ? null : tag);
+    // You might want to add logic here to filter the parameters based on the selected tag
+  };
+
+  const handleSearch = async () => {
     try {
       const response = await axios.get(`http://localhost:8000/api/todo/search/${searchTerm}`);
       setParameters(response.data);
@@ -41,27 +54,28 @@ const MainPage = () => {
         alert('Todo field cannot be empty.');
         return;
       }
-      
+
       const formData = new FormData();
       formData.append('user', currentUser);
       formData.append('todo', newParameter.todo);
-      
+      formData.append('tag', newParameter.tag);
+
       if (newParameter.thumbnail) {
         formData.append('thumbnail', newParameter.thumbnail);
       }
-      
+
       if (newParameter.file) {
         formData.append('file', newParameter.file);
       }
-  
+
       await axios.post('http://localhost:8000/api/todo/add', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-  
+
       await fetchParameters();
-      setNewParameter({ todo: '', file: null, thumbnail: null });
+      setNewParameter({ todo: '', file: null, thumbnail: null, tag: '' });
     } catch (error) {
       console.error('Error adding parameter:', error);
     }
@@ -83,27 +97,24 @@ const MainPage = () => {
   const editParameter = parameter => {
     console.log(parameter);
     setEditMode(parameter._id);
-    setParameters(parameters.map(p => 
+    setParameters(parameters.map(p =>
       p._id === parameter._id ? { ...p, editData: { ...p } } : p
     ));
   };
 
   const handleEditChange = (id, field, value) => {
-    setParameters(parameters.map(p => 
+    setParameters(parameters.map(p =>
       p._id === id ? { ...p, editData: { ...p.editData, [field]: value } } : p
     ));
   };
 
   const submitEditParameter = async parameter => {
     try {
-      const currentUser = localStorage.getItem('currentUser').replace(/"/g, '');
       const updatedParam = {
         _id: parameter._id,
         newTodo: {
-          user: currentUser,
           todo: parameter.editData.todo,
-          img: parameter.editData.thumbnail ? parameter.editData.thumbnail.name : '',
-          file: parameter.editData.file ? parameter.editData.file.name : ''
+          tag: parameter.editData.tag
         }
       };
       await axios.put(`http://localhost:8000/api/todo/editById`, updatedParam);
@@ -132,11 +143,10 @@ const MainPage = () => {
     const downloadUrl = `http://localhost:8000/api/todo/downloadFile/${filename}`;
     try {
       const response = await axios.get(downloadUrl, {
-        responseType: 'blob', 
+        responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
-  
-      // Create a temporary <a> element to trigger the download
+
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', filename);
@@ -145,12 +155,12 @@ const MainPage = () => {
       link.parentNode.removeChild(link);
     } catch (error) {
       console.error('Error downloading file:', error);
-      // Handle error as needed
     }
   };
 
   useEffect(() => {
     fetchParameters();
+    fetchTags();
   }, []);
 
   return (
@@ -171,9 +181,25 @@ const MainPage = () => {
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch();
+              }
+            }}
             className="search-input"
           />
-          <button onClick={searchParameters} className="search-button">Search</button>
+          <button onClick={handleSearch} className="search-button">Search</button>
+        </div>
+        <div className="tags-container">
+          {tags.map((tag) => (
+            <button
+              key={tag}
+              className={`tag-button ${selectedTag === tag ? 'selected' : ''}`}
+              onClick={() => handleTagClick(tag)}
+            >
+              {tag}
+            </button>
+          ))}
         </div>
         <div className="parameter-container">
           <table className="parameter-table">
@@ -181,6 +207,7 @@ const MainPage = () => {
               <tr>
                 <th className="parameter-thumbnail">Thumbnail</th>
                 <th className="parameter-key">To-do</th>
+                <th className="parameter-tag">Tag</th>
                 <th className="parameter-file">File</th>
                 <th className="parameter-actions">Actions</th>
               </tr>
@@ -192,23 +219,25 @@ const MainPage = () => {
                     {editMode === parameter._id ? (
                       <>
                         <td className="parameter-thumbnail">
-                          <input 
-                            type="file" 
-                            onChange={e => handleEditChange(parameter._id, 'thumbnail', e.target.files[0])} 
-                          />
+                          {parameter.thumbnail ? <img src={parameter.thumbnail} alt="Thumbnail" /> : 'No image'}
                         </td>
                         <td className="parameter-key">
-                          <input 
-                            type="text" 
-                            value={parameter.editData.todo} 
-                            onChange={e => handleEditChange(parameter._id, 'todo', e.target.value)} 
+                          <input
+                            type="text"
+                            value={parameter.editData.todo}
+                            onChange={e => handleEditChange(parameter._id, 'todo', e.target.value)}
+                          />
+                        </td>
+                        <td className="parameter-tag">
+                          <input
+                            type="text"
+                            value={parameter.editData.tag || ''}
+                            onChange={e => handleEditChange(parameter._id, 'tag', e.target.value)}
                           />
                         </td>
                         <td className="parameter-file">
-                          <input 
-                            type="file" 
-                            onChange={e => handleEditChange(parameter._id, 'file', e.target.files[0])} 
-                          />
+                          {parameter.file}
+                          <button className="download-button" onClick={() => handleDownload(parameter.file)}>↓</button>
                         </td>
                         <td className="parameter-actions">
                           <button onClick={() => submitEditParameter(parameter)} className="submit-button">Submit</button>
@@ -218,6 +247,7 @@ const MainPage = () => {
                       <>
                         <td className="parameter-thumbnail">{parameter.thumbnail ? <img src={parameter.thumbnail} alt="Thumbnail" /> : 'No image'}</td>
                         <td className="parameter-key">{parameter.todo}</td>
+                        <td className="parameter-tag">{parameter.tag || ''}</td>
                         <td className="parameter-file">
                           {parameter.file}
                           <button className="download-button" onClick={() => handleDownload(parameter.file)}>↓</button>
@@ -246,6 +276,7 @@ const MainPage = () => {
               <tr>
                 <th className="parameter-thumbnail">Thumbnail</th>
                 <th className="parameter-key">To-do</th>
+                <th className="parameter-tag">Tag</th>
                 <th className="parameter-file">File</th>
                 <th className="parameter-actions">Actions</th>
               </tr>
@@ -253,27 +284,37 @@ const MainPage = () => {
             <tbody>
               <tr>
                 <td className="parameter-thumbnail">
-                  <input 
-                    type="file" 
-                    id="thumbnailUpload" 
-                    onChange={e => setNewParameter({ ...newParameter, thumbnail: e.target.files[0] })} 
+                  <input
+                    type="file"
+                    id="thumbnailUpload"
+                    onChange={e => setNewParameter({ ...newParameter, thumbnail: e.target.files[0] })}
                   />
                 </td>
                 <td className="parameter-key">
-                  <input 
-                    type="text" 
-                    id="todoInput" 
-                    value={newParameter.todo} 
-                    onChange={e => setNewParameter({ ...newParameter, todo: e.target.value })} 
+                  <input
+                    type="text"
+                    id="todoInput"
+                    value={newParameter.todo}
+                    onChange={e => setNewParameter({ ...newParameter, todo: e.target.value })}
                     style={{ height: '20px', marginTop: '12px' }}
                     placeholder="Enter to-do"
                   />
                 </td>
+                <td className="parameter-tag">
+                  <input
+                    type="text"
+                    id="tagInput"
+                    value={newParameter.tag}
+                    onChange={e => setNewParameter({ ...newParameter, tag: e.target.value })}
+                    style={{ height: '20px', marginTop: '12px' }}
+                    placeholder="Enter tag"
+                  />
+                </td>
                 <td className="parameter-file">
-                  <input 
-                    type="file" 
-                    id="fileUpload" 
-                    onChange={e => setNewParameter({ ...newParameter, file: e.target.files[0] })} 
+                  <input
+                    type="file"
+                    id="fileUpload"
+                    onChange={e => setNewParameter({ ...newParameter, file: e.target.files[0] })}
                   />
                 </td>
                 <td className="parameter-actions">
@@ -284,7 +325,7 @@ const MainPage = () => {
           </table>
         </div>
       </div>
-    </div>
+    </div>   //test
   );
 };
 

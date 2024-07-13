@@ -18,6 +18,10 @@ const ToDoSchema = new Schema({
     required: true,
     unique: true
   },
+  tag: {
+    type: String,
+    required: false
+  }
 });
 
 export default model('Todo', ToDoSchema);

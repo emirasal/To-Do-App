@@ -1,4 +1,5 @@
 import Todo from "../models/todo.js";
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -19,7 +20,7 @@ export const getAllByEmail = async (req, res, next) => {
   };
 
 export const add = async (req, res, next) => {
-    const { user, todo } = req.body; 
+    const { user, todo, tag } = req.body; 
     const img = req.files['thumbnail'] ? req.files['thumbnail'][0].filename : '';
     const file = req.files['file'] ? req.files['file'][0].filename : '';
     
@@ -28,7 +29,8 @@ export const add = async (req, res, next) => {
         user,
         img,
         file,
-        todo
+        todo,
+        tag
         });
 
         const savedTodo = await newTodo.save();
@@ -72,8 +74,8 @@ export const editById = async (req, res, next) => {
 
   try {
     const updatedTodo = await Todo.findOneAndUpdate(
-      { _id, _id },
-      { $set: newTodo },
+      { _id: _id },
+      { $set: { todo: newTodo } },
       { new: true }
     );
 
@@ -102,5 +104,26 @@ export const downloadFile = async (req, res, next) => {
     });
   } catch (error) {
     res.status(500).json({error});
+  }
+};
+
+export const search = async (req, res, next) => {
+  const { key } = req.params;
+  
+  try {
+    const todos = await Todo.find({ todo: { $regex: key, $options: 'i' } });
+    res.json(todos);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAllTags = async (req, res, next) => {
+  try {
+    // Use distinct to get all unique tags
+    const tags = await Todo.distinct("tag");
+    res.status(200).json(tags);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
