@@ -1,0 +1,33 @@
+﻿[PMC Globals]|None||
+[PMC Code v5.4.1]|F3||1|Screen,2,Fast,0,1,Input,-1,-1,1|1|Macro1
+Context=None|
+Groups=Options:1,Play:2,Replay:6,BlumLoop:14,End:27
+1|[Assign Variable]|PlayAmount := 1|1|0|Variable|Expression||Kaç kere oynamasını istediğini gir|0xFF0000|1|
+2|[Subtract Variable]|PlayAmount -= 1|1|0|Variable|Expression||||2|
+3|Left Move & Click|398, 246 Left, 1|1|10|Click|||Play düğmesi|0xFF0000|3|
+4|Run Once|Replay|1|32000|SetTimer|||||5|
+5|[Goto]|BlumLoop|1|0|Goto|||||6|
+6|[Label]|Replay|1|0|Label||||0x11B1FF|7|
+7|Compare Variables|PlayAmount > 0|1|0|If_Statement|||||8|
+8|[Subtract Variable]|PlayAmount -= 1|1|0|Variable|Expression||||10|
+9|Left Move & Click|275, 294 Left, 1|1|10|Click|||Replay düğmesi|0xFF0000|11|
+10|Run Once|Replay|1|32000|SetTimer|||||13|
+11|[Goto]|BlumLoop|1|0|Goto|||||14|
+12|[End If]|EndIf|1|0|If_Statement|||||15|
+13|[Goto]|End|1|0|Goto|||||16|
+14|[Label]|BlumLoop|1|0|Label||||0x11B1FF|17|
+15|[LoopStart]|LoopStart|0|0|Loop|||||18|
+16|[LoopStart]|LoopStart|1|0|Loop|||sarı/mavi ratio||20|
+17|Continue, Continue, FoundX, FoundY|93, 68, 422, 308, 0xCCDB00, 5, Fast RGB|1|0|PixelSearch||Screen|sarı pixel|0xFF0000|22|
+18|If Image/Pixel Found||1|0|If_Statement|||||24|
+19|Left Move & Click|%FoundX%, %FoundY% Left, 1|1|0|Click|||||26|
+20|[End If]|EndIf|1|0|If_Statement|||||27|
+21|[LoopEnd]|LoopEnd|1|0|Loop|||||28|
+022|Continue, Continue, FoundX, FoundY|97, 211, 454, 334, 0x5C9FDD, 50, Fast RGB|1|0|PixelSearch||Screen|mavi pixel|0xFF0000|29|
+023|If Image/Pixel Found||1|0|If_Statement|||||32|
+024|Left Move & Click|%FoundX%, %FoundY% Left, 1|1|0|Click|||||34|
+025|[End If]|EndIf|1|0|If_Statement|||||35|
+26|[LoopEnd]|LoopEnd|1|0|Loop|||||36|
+27|[Label]|End|1|0|Label|||||38|
+28|[MsgBox]|bitti|1|0|MsgBox|0||||39|
+

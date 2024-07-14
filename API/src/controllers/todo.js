@@ -34,7 +34,7 @@ export const add = async (req, res, next) => {
     }
     
     
-    //try {
+    try {
         const newTodo = new Todo({
         userId,
         img,
@@ -46,9 +46,9 @@ export const add = async (req, res, next) => {
         const savedTodo = await newTodo.save();
 
         res.status(201).json(savedTodo);
-    //} catch (error) {
-      //  res.status(500).json({ message: error.message });
-    //}
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
 
 export const deleteById = async (req, res, next) => {
@@ -162,9 +162,9 @@ export const uploads = async (req, res, next) => {
     const imgName = req.params.img;
     const imgPath = path.join(__dirname, '..', '..', 'uploads', imgName);
 
-    // Check if the file exists
+
     if (fs.existsSync(imgPath)) {
-      // Set the appropriate content type
+
       const ext = path.extname(imgName).toLowerCase();
       const contentType = {
         '.png': 'image/png',
@@ -174,7 +174,6 @@ export const uploads = async (req, res, next) => {
 
       res.setHeader('Content-Type', contentType);
 
-      // Stream the file
       const stream = fs.createReadStream(imgPath);
       stream.pipe(res);
     } else {
