@@ -8,17 +8,24 @@ const MainPage = () => {
   const [newParameter, setNewParameter] = useState({ todo: '', file: null, thumbnail: null, tag: '' });
   const [editMode, setEditMode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [imageBaseUrl, setImageBaseUrl] = useState('http://localhost:8000/api/todo/downloadFile/');
   const [tags, setTags] = useState([]);
   const [selectedTag, setSelectedTag] = useState(null);
 
   const fetchParameters = async () => {
     try {
       let currentUser = localStorage.getItem('currentUser');
-      currentUser = currentUser.replace(/"/g, '');
-      const response = await axios.get(`http://localhost:8000/api/todo/getAllByEmail/${currentUser}`);
+      currentUser = JSON.parse(currentUser);
+      
+      const response = await axios.get(`http://localhost:8000/api/todo/getAllByUser/${currentUser.userId}/${currentUser.accessToken}`);
       console.log('Fetched parameters:', response.data);
-      setParameters(response.data);
+      
+      // Modify the response data to include full image URLs
+      const parametersWithImageUrls = response.data.map(param => ({
+        ...param,
+        imageUrl: param.img ? `http://localhost:8000/api/todo/uploads/${param.img}` : null
+      }));
+      
+      setParameters(parametersWithImageUrls);
     } catch (error) {
       console.error('Error fetching parameters:', error);
     }
@@ -35,13 +42,14 @@ const MainPage = () => {
 
   const handleTagClick = async (tag) => {
     if (tag === selectedTag) {
-      // Deselect the tag and fetch all parameters
       setSelectedTag(null);
       fetchParameters();
     } else {
       setSelectedTag(tag);
       try {
-        const response = await axios.get(`http://localhost:8000/api/todo/getByTag/${tag}`);
+        let currentUser = localStorage.getItem('currentUser');
+        currentUser = JSON.parse(currentUser);
+        const response = await axios.get(`http://localhost:8000/api/todo/getByTag/${tag}/${currentUser.userId}`);
         setParameters(response.data);
       } catch (error) {
         console.error('Error fetching parameters by tag:', error);
@@ -50,8 +58,10 @@ const MainPage = () => {
   };
 
   const handleSearch = async () => {
+    let currentUser = localStorage.getItem('currentUser');
+    currentUser = JSON.parse(currentUser);
     try {
-      const response = await axios.get(`http://localhost:8000/api/todo/search/${searchTerm}`);
+      const response = await axios.get(`http://localhost:8000/api/todo/search/${searchTerm}/${currentUser.userId}`);
       setParameters(response.data);
     } catch (error) {
       console.error('Error searching parameters:', error);
@@ -60,23 +70,35 @@ const MainPage = () => {
 
   const addParameter = async () => {
     try {
-      const currentUser = localStorage.getItem('currentUser').replace(/"/g, '');
-      if (!newParameter.todo.trim()) {
+      let currentUser = localStorage.getItem('currentUser');
+      currentUser = JSON.parse(currentUser);
+      
+      const todoInput = document.getElementById('todoInput');
+      const tagInput = document.getElementById('tagInput');
+      const thumbnailInput = document.getElementById('thumbnailUpload');
+      const fileInput = document.getElementById('fileUpload');
+
+      const todo = todoInput.value.trim();
+      const tag = tagInput.value.trim();
+      const thumbnail = thumbnailInput.files[0];
+      const file = fileInput.files[0];
+
+      if (!todo) {
         alert('Todo field cannot be empty.');
         return;
       }
 
       const formData = new FormData();
-      formData.append('user', currentUser);
-      formData.append('todo', newParameter.todo);
-      formData.append('tag', newParameter.tag);
+      formData.append('userId', currentUser.userId);
+      formData.append('todo', todo);
+      formData.append('tag', tag);
 
-      if (newParameter.thumbnail) {
-        formData.append('thumbnail', newParameter.thumbnail);
+      if (thumbnail) {
+        formData.append('thumbnail', thumbnail);
       }
 
-      if (newParameter.file) {
-        formData.append('file', newParameter.file);
+      if (file) {
+        formData.append('file', file);
       }
 
       await axios.post('http://localhost:8000/api/todo/add', formData, {
@@ -86,15 +108,23 @@ const MainPage = () => {
       });
 
       await fetchParameters();
-      setNewParameter({ todo: '', file: null, thumbnail: null, tag: '' });
+      
+      // Clear input fields after successful addition
+      todoInput.value = '';
+      tagInput.value = '';
+      thumbnailInput.value = '';
+      fileInput.value = '';
     } catch (error) {
       console.error('Error adding parameter:', error);
     }
   };
 
   const deleteParameter = async (parameter) => {
+    let currentUser = localStorage.getItem('currentUser');
+    currentUser = JSON.parse(currentUser);
+    console.log(currentUser.accessToken);
     try {
-      await axios.delete('http://localhost:8000/api/todo/deleteById', {
+      await axios.delete(`http://localhost:8000/api/todo/deleteById/${currentUser.accessToken}`, {
         data: {
           _id: parameter._id,
         }
@@ -113,19 +143,16 @@ const MainPage = () => {
     ));
   };
 
-  const handleEditChange = (id, field, value) => {
-    setParameters(parameters.map(p =>
-      p._id === id ? { ...p, editData: { ...p.editData, [field]: value } } : p
-    ));
-  };
-
   const submitEditParameter = async (parameter) => {
     try {
+      const todoInput = document.querySelector(`input[data-id="${parameter._id}"][data-field="todo"]`);
+      const tagInput = document.querySelector(`input[data-id="${parameter._id}"][data-field="tag"]`);
+
       const updatedParam = {
         _id: parameter._id,
         newTodo: {
-          todo: parameter.editData.todo,
-          tag: parameter.editData.tag
+          todo: todoInput.value,
+          tag: tagInput.value
         }
       };
       await axios.put(`http://localhost:8000/api/todo/editById`, updatedParam);
@@ -148,6 +175,7 @@ const MainPage = () => {
   };
 
   const toggleDropdown = () => {
+    console.log('All cookies:', document.cookie);
     setShowDropdown(!showDropdown);
   };
 
@@ -193,11 +221,6 @@ const MainPage = () => {
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
             className="search-input"
           />
           <button onClick={handleSearch} className="search-button">Search</button>
@@ -226,6 +249,7 @@ const MainPage = () => {
             </thead>
             <tbody>
               {parameters.map(parameter => {
+                console.log('Parameter:', parameter);
                 return (
                   <tr key={parameter._id}>
                     {editMode === parameter._id ? (
@@ -236,15 +260,17 @@ const MainPage = () => {
                         <td className="parameter-key">
                           <input
                             type="text"
-                            value={parameter.editData.todo}
-                            onChange={e => handleEditChange(parameter._id, 'todo', e.target.value)}
+                            defaultValue={parameter.todo}
+                            data-id={parameter._id}
+                            data-field="todo"
                           />
                         </td>
                         <td className="parameter-tag">
                           <input
                             type="text"
-                            value={parameter.editData.tag || ''}
-                            onChange={e => handleEditChange(parameter._id, 'tag', e.target.value)}
+                            defaultValue={parameter.tag || ''}
+                            data-id={parameter._id}
+                            data-field="tag"
                           />
                         </td>
                         <td className="parameter-file">
@@ -257,7 +283,15 @@ const MainPage = () => {
                       </>
                     ) : (
                       <>
-                        <td className="parameter-thumbnail">{parameter.thumbnail ? <img src={parameter.thumbnail} alt="Thumbnail" /> : 'No image'}</td>
+                        <td className="parameter-file">
+                          {parameter.imageUrl ? (
+                            <img style={{ width: '200px', height: '100px' }} src={parameter.imageUrl} alt="File Image" />
+                          ) : (
+                            'No image'
+                          )}
+                        </td>
+
+
                         <td className="parameter-key">{parameter.todo}</td>
                         <td className="parameter-tag">{parameter.tag || ''}</td>
                         <td className="parameter-file">
@@ -299,15 +333,12 @@ const MainPage = () => {
                   <input
                     type="file"
                     id="thumbnailUpload"
-                    onChange={e => setNewParameter({ ...newParameter, thumbnail: e.target.files[0] })}
                   />
                 </td>
                 <td className="parameter-key">
                   <input
                     type="text"
                     id="todoInput"
-                    value={newParameter.todo}
-                    onChange={e => setNewParameter({ ...newParameter, todo: e.target.value })}
                     style={{ height: '20px', marginTop: '12px' }}
                     placeholder="Enter to-do"
                   />
@@ -316,8 +347,6 @@ const MainPage = () => {
                   <input
                     type="text"
                     id="tagInput"
-                    value={newParameter.tag}
-                    onChange={e => setNewParameter({ ...newParameter, tag: e.target.value })}
                     style={{ height: '20px', marginTop: '12px' }}
                     placeholder="Enter tag"
                   />
@@ -326,7 +355,6 @@ const MainPage = () => {
                   <input
                     type="file"
                     id="fileUpload"
-                    onChange={e => setNewParameter({ ...newParameter, file: e.target.files[0] })}
                   />
                 </td>
                 <td className="parameter-actions">

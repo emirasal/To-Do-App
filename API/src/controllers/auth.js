@@ -40,16 +40,17 @@ export const login = async (req, res, next) => {
             id: user._id,
         }, process.env.JWT_KEY);
 
-        
-        console.log(token);
         res.cookie("accessToken", token, {
-            httpOnly: true
-        }).status(200).send(req.body.email);
+            httpOnly: true,
+        });
+        
 
+        res.status(200).send({ userId: user._id, accessToken: token });
     } catch (err) {
         next(err); 
     }
 };
+
 
 export const logout = async (req, res) =>{
     try {

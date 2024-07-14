@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import './LoginPage.css'; // Ensure to move the CSS content to this file or use a CSS-in-JS solution
+
+import './LoginPage.css';
+import newRequest from '../../utils/newRequest';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:8000/api/auth/login', { email, password });
+      const res = await newRequest.post('/auth/login', { email, password });
       localStorage.setItem('currentUser', JSON.stringify(res.data));
       navigate('/');
     } catch (err) {

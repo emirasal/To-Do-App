@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 
 const ToDoSchema = new Schema({
-  user: {
+  userId: {
     type: String,
     required: true
   },
