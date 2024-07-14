@@ -7,7 +7,8 @@ Login Page: <br/>
 ![image](https://github.com/user-attachments/assets/e95a113c-3582-4358-a5fe-02fc36c0228b)
 
 Main Page: <br/>
-![image](https://github.com/user-attachments/assets/e20f66e3-3d4c-4e4e-9a82-6f104cab0961)
+![image](https://github.com/user-attachments/assets/887a1271-bc07-4450-85d4-3979c4cce11c)
+
 
 
 ## Deployement
