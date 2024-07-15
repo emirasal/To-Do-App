@@ -1,361 +1,193 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './MainPage.css';
+import Todo from "../models/todo.js";
 
-const MainPage = () => {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [parameters, setParameters] = useState([]);
-  const [newParameter, setNewParameter] = useState({ todo: '', file: null, thumbnail: null, tag: '' });
-  const [editMode, setEditMode] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [imageBaseUrl, setImageBaseUrl] = useState('http://localhost:8000/api/todo/downloadFile/');
-  const [tags, setTags] = useState([]);
-  const [selectedTag, setSelectedTag] = useState(null);
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fs from 'fs';
 
-  const fetchParameters = async () => {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+export const getAll= async (req, res, next) => {
+
     try {
-      let currentUser = localStorage.getItem('currentUser');
-      currentUser = JSON.parse(currentUser);
+      const todos = await Todo.find({ userId: req.userId });
+
+
+      if (todos.length > 0  && todos[0].userId !== req.userId)  return res.status(403).send("You are not allowed!");
       
-      //currentUser = currentUser.replace(/"/g, '');
-      const response = await axios.get(`http://localhost:8000/api/todo/getAllByUser/${currentUser.userId}/${currentUser.accessToken}`);
-      console.log('Fetched parameters:', response.data);
-      setParameters(response.data);
-
-       
+      res.status(200).json(todos);
     } catch (error) {
-      console.error('Error fetching parameters:', error);
+      res.status(500).json({ message: error.message });
     }
   };
 
-  const fetchTags = async () => {
+export const add = async (req, res, next) => {
+  
+    const { userId, todo, tag } = req.body; 
+    let img, file;
+    if (req.files != undefined ) {
+      img = req.files['thumbnail'] ? req.files['thumbnail'][0].filename : '';
+      file = req.files['file'] ? req.files['file'][0].filename : '';
+    }
+    
+    
     try {
-      const response = await axios.get('http://localhost:8000/api/todo/getAllTags');
-      setTags(response.data);
+        const newTodo = new Todo({
+        userId,
+        img,
+        file,
+        todo,
+        tag
+        });
+
+        const savedTodo = await newTodo.save();
+
+        res.status(201).json(savedTodo);
     } catch (error) {
-      console.error('Error fetching tags:', error);
+        res.status(500).json({ message: error.message });
     }
-  };
-
-  const handleTagClick = async (tag) => {
-    if (tag === selectedTag) {
-
-      setSelectedTag(null);
-      fetchParameters();
-    } else {
-      setSelectedTag(tag);
-      try {
-        let currentUser = localStorage.getItem('currentUser');
-        currentUser = JSON.parse(currentUser);
-        const response = await axios.get(`http://localhost:8000/api/todo/getByTag/${tag}/${currentUser.userId}`);
-        setParameters(response.data);
-      } catch (error) {
-        console.error('Error fetching parameters by tag:', error);
-      }
-    }
-  };
-
-  const handleSearch = async () => {
-    let currentUser = localStorage.getItem('currentUser');
-    currentUser = JSON.parse(currentUser);
-    try {
-      const response = await axios.get(`http://localhost:8000/api/todo/search/${searchTerm}/${currentUser.userId}`);
-      setParameters(response.data);
-    } catch (error) {
-      console.error('Error searching parameters:', error);
-    }
-  };
-
-  const addParameter = async () => {
-    try {
-      let currentUser = localStorage.getItem('currentUser');
-      currentUser = JSON.parse(currentUser);
-      if (!newParameter.todo.trim()) {
-        alert('Todo field cannot be empty.');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('userId', currentUser.userId);
-      formData.append('todo', newParameter.todo);
-      formData.append('tag', newParameter.tag);
-
-      if (newParameter.thumbnail) {
-        formData.append('thumbnail', newParameter.thumbnail);
-      }
-
-      if (newParameter.file) {
-        formData.append('file', newParameter.file);
-      }
-
-      await axios.post('http://localhost:8000/api/todo/add', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      await fetchParameters();
-      setNewParameter({ todo: '', file: null, thumbnail: null, tag: '' });
-    } catch (error) {
-      console.error('Error adding parameter:', error);
-    }
-  };
-
-  const deleteParameter = async (parameter) => {
-    let currentUser = localStorage.getItem('currentUser');
-    currentUser = JSON.parse(currentUser);
-    console.log(currentUser.accessToken);
-    try {
-      await axios.delete(`http://localhost:8000/api/todo/deleteById/${currentUser.accessToken}`, {
-        data: {
-          _id: parameter._id,
-        }
-      });
-      await fetchParameters();
-    } catch (error) {
-      console.error('Error deleting parameter:', error);
-    }
-  };
-
-  const editParameter = (parameter) => {
-    console.log(parameter);
-    setEditMode(parameter._id);
-    setParameters(parameters.map(p =>
-      p._id === parameter._id ? { ...p, editData: { ...p } } : p
-    ));
-  };
-
-  const handleEditChange = (id, field, value) => {
-    setParameters(parameters.map(p =>
-      p._id === id ? { ...p, editData: { ...p.editData, [field]: value } } : p
-    ));
-  };
-
-  const submitEditParameter = async (parameter) => {
-    try {
-      const updatedParam = {
-        _id: parameter._id,
-        newTodo: {
-          todo: parameter.editData.todo,
-          tag: parameter.editData.tag
-        }
-      };
-      await axios.put(`http://localhost:8000/api/todo/editById`, updatedParam);
-      setEditMode(null);
-      await fetchTags();
-      await fetchParameters();
-    } catch (error) {
-      console.error('Error updating parameter:', error);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await axios.post('http://localhost:8000/api/auth/logout');
-      localStorage.removeItem('currentUser');
-      window.location.reload();
-    } catch (err) {
-      console.error('Error logging out:', err);
-    }
-  };
-
-  const toggleDropdown = () => {
-    console.log('All cookies:', document.cookie);
-    setShowDropdown(!showDropdown);
-  };
-
-  const handleDownload = async (filename) => {
-    const downloadUrl = `http://localhost:8000/api/todo/downloadFile/${filename}`;
-    try {
-      const response = await axios.get(downloadUrl, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-    } catch (error) {
-      console.error('Error downloading file:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchParameters();
-    fetchTags();
-  }, []);
-
-  return (
-    <div>
-      <div className="header">
-        <img src="logo.png" alt="Playable Factory" className="site-logo" />
-        <img src="user.png" alt="User" onClick={toggleDropdown} className="user-icon" />
-        {showDropdown && (
-          <div className="dropdown">
-            <button onClick={handleSignOut}>Sign Out</button>
-          </div>
-        )}
-      </div>
-      <div className="content">
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
-            className="search-input"
-          />
-          <button onClick={handleSearch} className="search-button">Search</button>
-        </div>
-        <div className="tags-container">
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              className={`tag-button ${selectedTag === tag ? 'selected' : ''}`}
-              onClick={() => handleTagClick(tag)}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-        <div className="parameter-container">
-          <table className="parameter-table">
-            <thead>
-              <tr>
-                <th className="parameter-thumbnail">Thumbnail</th>
-                <th className="parameter-key">To-do</th>
-                <th className="parameter-tag">Tag</th>
-                <th className="parameter-file">File</th>
-                <th className="parameter-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parameters.map(parameter => {
-                console.log('Parameter:', parameter);
-                return (
-                  <tr key={parameter._id}>
-                    {editMode === parameter._id ? (
-                      <>
-                        <td className="parameter-thumbnail">
-                          {parameter.thumbnail ? <img src={parameter.thumbnail} alt="Thumbnail" /> : 'No image'}
-                        </td>
-                        <td className="parameter-key">
-                          <input
-                            type="text"
-                            value={parameter.editData.todo}
-                            onChange={e => handleEditChange(parameter._id, 'todo', e.target.value)}
-                          />
-                        </td>
-                        <td className="parameter-tag">
-                          <input
-                            type="text"
-                            value={parameter.editData.tag || ''}
-                            onChange={e => handleEditChange(parameter._id, 'tag', e.target.value)}
-                          />
-                        </td>
-                        <td className="parameter-file">
-                          {parameter.file}
-                          <button className="download-button" onClick={() => handleDownload(parameter.file)}>↓</button>
-                        </td>
-                        <td className="parameter-actions">
-                          <button onClick={() => submitEditParameter(parameter)} className="submit-button">Submit</button>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="parameter-file">
-                          {parameter.img}
-                          <button className="download-button" onClick={() => handleDownload(parameter.file)}>↓</button>
-                        </td>
-                        <td className="parameter-key">{parameter.todo}</td>
-                        <td className="parameter-tag">{parameter.tag || ''}</td>
-                        <td className="parameter-file">
-                          {parameter.file}
-                          <button className="download-button" onClick={() => handleDownload(parameter.file)}>↓</button>
-                        </td>
-                        <td className="parameter-actions">
-                          <div className="action-buttons">
-                            <button onClick={() => editParameter(parameter)} className="edit-button">Edit</button>
-                            <button onClick={() => {
-                              console.log('Deleting parameter with _id:', parameter._id);
-                              deleteParameter(parameter);
-                            }} className="delete-button">Delete</button>
-                          </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="new-parameter-container">
-          <h1>Add a new To-do</h1>
-          <table className="parameter-table">
-            <thead>
-              <tr>
-                <th className="parameter-thumbnail">Thumbnail</th>
-                <th className="parameter-key">To-do</th>
-                <th className="parameter-tag">Tag</th>
-                <th className="parameter-file">File</th>
-                <th className="parameter-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="parameter-thumbnail">
-                  <input
-                    type="file"
-                    id="thumbnailUpload"
-                    onChange={e => setNewParameter({ ...newParameter, thumbnail: e.target.files[0] })}
-                  />
-                </td>
-                <td className="parameter-key">
-                  <input
-                    type="text"
-                    id="todoInput"
-                    value={newParameter.todo}
-                    onChange={e => setNewParameter({ ...newParameter, todo: e.target.value })}
-                    style={{ height: '20px', marginTop: '12px' }}
-                    placeholder="Enter to-do"
-                  />
-                </td>
-                <td className="parameter-tag">
-                  <input
-                    type="text"
-                    id="tagInput"
-                    value={newParameter.tag}
-                    onChange={e => setNewParameter({ ...newParameter, tag: e.target.value })}
-                    style={{ height: '20px', marginTop: '12px' }}
-                    placeholder="Enter tag"
-                  />
-                </td>
-                <td className="parameter-file">
-                  <input
-                    type="file"
-                    id="fileUpload"
-                    onChange={e => setNewParameter({ ...newParameter, file: e.target.files[0] })}
-                  />
-                </td>
-                <td className="parameter-actions">
-                  <button onClick={addParameter} className="add-parameter-button">Add</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
 };
 
-export default MainPage;
+export const deleteById = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const todoToDelete = await Todo.findById(id);
+
+    if (!todoToDelete) {
+      return res.status(404).json({ message: 'Todo not found' });
+    }
+
+    if (todoToDelete.userId !== req.userId)  return res.status(403).send("You are not allowed!");
+
+    try {
+      if (todoToDelete.img !== '') {
+        const imgPath = path.join(__dirname, '../../uploads', todoToDelete.img);
+        fs.unlink(imgPath); 
+      }
+      if (todoToDelete.file !== '') {
+        const filePath = path.join(__dirname, '../../uploads', todoToDelete.file);
+        fs.unlink(filePath);
+      }
+    } catch {
+      console.log('files do no exits');
+    }
+    
+    await Todo.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Todo and associated files deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting todo and files:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const editById = async (req, res, next) => {
+  const { todo, tag } = req.body;
+  const { id } = req.params;
+
+  console.log(req.body);
+  
+  try {
+    const updatedTodo = await Todo.findOneAndUpdate(
+      { _id: id },
+      { $set: { 
+          todo: todo,
+          tag: tag
+        } 
+      }
+    );
+
+    if (!updatedTodo) {
+      return res.status(404).json({ message: 'Todo not found' });
+    }
+
+    res.status(200).json(updatedTodo);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const downloadFile = async (req, res, next) => {
+  try {
+    
+    const fileName = req.params.fileName;
+    
+    const filePath = path.join(__dirname, '../../uploads/', fileName);
+
+    res.download(filePath, (err) => {
+      if (err) {
+        res.status(404).json({ message: 'File not found or error downloading' });
+      }
+    });
+  } catch (error) {
+    res.status(500).json({error});
+  }
+};
+
+export const search = async (req, res, next) => {
+  const { key } = req.params;
+  
+  try {
+    const todos = await Todo.find({ userId: req.userId, todo: { $regex: key, $options: 'i' } });
+    res.json(todos);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getTagsByUser = async (req, res, next) => {
+  
+  try {
+    const tags = await Todo.aggregate([
+      { $match: { userId: req.userId } },
+      { $group: { _id: "$tag" } },
+      { $project: { _id: 0, tag: "$_id" } }
+    ]);
+    const distinctTags = tags.map(tag => tag.tag);
+    res.status(200).json(distinctTags);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getByTag = async (req, res, next) => {
+  const { tag } = req.params;
+  try {
+    const todos = await Todo.find({ userId: req.userId, tag: tag });
+    res.status(200).json(todos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const uploads = async (req, res, next) => {
+  try {
+    console.log("asdadada");
+    const imgName = req.params.img;
+    const imgPath = path.join(__dirname, '..', '..', 'uploads', imgName);
+
+
+    if (fs.existsSync(imgPath)) {
+
+      const ext = path.extname(imgName).toLowerCase();
+      const contentType = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+      }[ext] || 'application/octet-stream';
+
+      res.setHeader('Content-Type', contentType);
+
+      const stream = fs.createReadStream(imgPath);
+      stream.pipe(res);
+    } else {
+      res.status(404).send('Image not found');
+    }
+  } catch (error) {
+    console.error('Error serving image:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};

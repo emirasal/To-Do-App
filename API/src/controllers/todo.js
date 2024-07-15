@@ -3,17 +3,15 @@ import Todo from "../models/todo.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-//import fs from 'fs/promises';
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export const getAllByUser = async (req, res, next) => {
-    const userId = req.params.userId;
+export const getAll= async (req, res, next) => {
 
     try {
-      const todos = await Todo.find({ userId: userId });
+      const todos = await Todo.find({ userId: req.userId });
 
 
       if (todos.length > 0  && todos[0].userId !== req.userId)  return res.status(403).send("You are not allowed!");
@@ -25,8 +23,10 @@ export const getAllByUser = async (req, res, next) => {
   };
 
 export const add = async (req, res, next) => {
-  console.log(req.body);
-    const { userId, todo, tag } = req.body; 
+  
+    const { todo, tag } = req.body; 
+    const userId = req.userId; 
+
     let img, file;
     if (req.files != undefined ) {
       img = req.files['thumbnail'] ? req.files['thumbnail'][0].filename : '';
@@ -52,10 +52,10 @@ export const add = async (req, res, next) => {
 };
 
 export const deleteById = async (req, res, next) => {
-  const { _id } = req.body;
+  const { id } = req.params;
 
   try {
-    const todoToDelete = await Todo.findById(_id);
+    const todoToDelete = await Todo.findById(id);
 
     if (!todoToDelete) {
       return res.status(404).json({ message: 'Todo not found' });
@@ -66,17 +66,17 @@ export const deleteById = async (req, res, next) => {
     try {
       if (todoToDelete.img !== '') {
         const imgPath = path.join(__dirname, '../../uploads', todoToDelete.img);
-        await fs.unlink(imgPath); 
+        fs.unlink(imgPath); 
       }
       if (todoToDelete.file !== '') {
         const filePath = path.join(__dirname, '../../uploads', todoToDelete.file);
-        await fs.unlink(filePath);
+        fs.unlink(filePath);
       }
     } catch {
       console.log('files do no exits');
     }
     
-    await Todo.findByIdAndDelete(_id);
+    await Todo.findByIdAndDelete(id);
 
     res.status(200).json({ message: 'Todo and associated files deleted successfully' });
   } catch (error) {
@@ -86,17 +86,19 @@ export const deleteById = async (req, res, next) => {
 };
 
 export const editById = async (req, res, next) => {
-  const { _id, newTodo } = req.body;
+  const { todo, tag } = req.body;
+  const { id } = req.params;
+
+  console.log(req.body);
   
   try {
     const updatedTodo = await Todo.findOneAndUpdate(
-      { _id: _id },
+      { _id: id },
       { $set: { 
-          todo: newTodo.todo,
-          tag: newTodo.tag
+          todo: todo,
+          tag: tag
         } 
-      },
-      { new: true }
+      }
     );
 
     if (!updatedTodo) {
@@ -127,29 +129,36 @@ export const downloadFile = async (req, res, next) => {
 };
 
 export const search = async (req, res, next) => {
-  const { key, userId } = req.params;
+  const { key } = req.params;
   
   try {
-    const todos = await Todo.find({ userId: userId, todo: { $regex: key, $options: 'i' } });
+    const todos = await Todo.find({ userId: req.userId, todo: { $regex: key, $options: 'i' } });
     res.json(todos);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const getAllTags = async (req, res, next) => {
+export const getTagsByUser = async (req, res, next) => {
+  
   try {
-    const tags = await Todo.distinct("tag");
-    res.status(200).json(tags);
+    const tags = await Todo.aggregate([
+      { $match: { userId: req.userId } },
+      { $group: { _id: "$tag" } },
+      { $project: { _id: 0, tag: "$_id" } }
+    ]);
+    const distinctTags = tags.map(tag => tag.tag);
+    res.status(200).json(distinctTags);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+
 export const getByTag = async (req, res, next) => {
-  const { tag, userId } = req.params;
+  const { tag } = req.params;
   try {
-    const todos = await Todo.find({ userId: userId, tag: tag });
+    const todos = await Todo.find({ userId: req.userId, tag: tag });
     res.status(200).json(todos);
   } catch (error) {
     res.status(500).json({ message: error.message });

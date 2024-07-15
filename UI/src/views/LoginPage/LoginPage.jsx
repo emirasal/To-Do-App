@@ -13,11 +13,11 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await newRequest.post('/auth/login', { email, password });
-      localStorage.setItem('currentUser', JSON.stringify(res.data));
+      await newRequest.post('/auth/login', { email, password });
       navigate('/');
     } catch (err) {
-      setErrMsg(err.response?.data?.message || 'An error occurred');
+
+      setErrMsg(err.response.data || 'An error occurred');
     }
   };
 

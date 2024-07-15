@@ -12,10 +12,10 @@ const RegisterPage = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:8000/api/auth/register', { email, password });
+      await axios.post('http://localhost:8000/api/auth/register', { email, password });
+    
+      alert("Successfully Registered, Sign In now.");
       navigate('/login');
-      console.log(res);
-      alert("Successfully Registered");
     } catch (err) {
       setErrMsg(err.response?.data?.message || 'An error occurred');
     }

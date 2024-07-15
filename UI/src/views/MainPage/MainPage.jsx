@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import './MainPage.css';
+import newRequest from "../../utils/newRequest";  
 
 const MainPage = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [parameters, setParameters] = useState([]);
-  const [newParameter, setNewParameter] = useState({ todo: '', file: null, thumbnail: null, tag: '' });
   const [editMode, setEditMode] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [tags, setTags] = useState([]);
@@ -13,11 +12,8 @@ const MainPage = () => {
 
   const fetchParameters = async () => {
     try {
-      let currentUser = localStorage.getItem('currentUser');
-      currentUser = JSON.parse(currentUser);
-      
-      const response = await axios.get(`http://localhost:8000/api/todo/getAllByUser/${currentUser.userId}/${currentUser.accessToken}`);
-      console.log('Fetched parameters:', response.data);
+  
+      const response = await newRequest.get('todo/getAll');
       
       const parametersWithImageUrls = response.data.map(param => ({
         ...param,
@@ -32,7 +28,7 @@ const MainPage = () => {
 
   const fetchTags = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/todo/getAllTags');
+      const response = await newRequest.get('todo/getTags');
       setTags(response.data);
     } catch (error) {
       console.error('Error fetching tags:', error);
@@ -46,9 +42,8 @@ const MainPage = () => {
     } else {
       setSelectedTag(tag);
       try {
-        let currentUser = localStorage.getItem('currentUser');
-        currentUser = JSON.parse(currentUser);
-        const response = await axios.get(`http://localhost:8000/api/todo/getByTag/${tag}/${currentUser.userId}`);
+
+        const response = await newRequest.get(`todo/getByTag/${tag}`);
         
         setParameters(response.data);
       } catch (error) {
@@ -58,10 +53,9 @@ const MainPage = () => {
   };
 
   const handleSearch = async () => {
-    let currentUser = localStorage.getItem('currentUser');
-    currentUser = JSON.parse(currentUser);
+    
     try {
-      const response = await axios.get(`http://localhost:8000/api/todo/search/${searchTerm}/${currentUser.userId}`);
+      const response = await newRequest.get(`todo/search/${searchTerm}`);
       setParameters(response.data);
     } catch (error) {
       console.error('Error searching parameters:', error);
@@ -70,8 +64,6 @@ const MainPage = () => {
 
   const addParameter = async () => {
     try {
-      let currentUser = localStorage.getItem('currentUser');
-      currentUser = JSON.parse(currentUser);
       
       const todoInput = document.getElementById('todoInput');
       const tagInput = document.getElementById('tagInput');
@@ -91,14 +83,13 @@ const MainPage = () => {
       if (thumbnail) {
         const allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
         if (!allowedExtensions.exec(thumbnail.name)) {
-          alert('Please upload only JPG, JPEG or PNG file for thumbnail.');
+          alert('Please upload only img');
           thumbnailInput.value = '';
           return;
         }
       }
 
       const formData = new FormData();
-      formData.append('userId', currentUser.userId);
       formData.append('todo', todo);
       formData.append('tag', tag);
 
@@ -110,13 +101,14 @@ const MainPage = () => {
         formData.append('file', file);
       }
 
-      await axios.post('http://localhost:8000/api/todo/add', formData, {
+      await newRequest.post('todo/add', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
       await fetchParameters();
+      await fetchTags();
     
       todoInput.value = '';
       tagInput.value = '';
@@ -128,15 +120,9 @@ const MainPage = () => {
   };
 
   const deleteParameter = async (parameter) => {
-    let currentUser = localStorage.getItem('currentUser');
-    currentUser = JSON.parse(currentUser);
-    console.log(currentUser.accessToken);
+    
     try {
-      await axios.delete(`http://localhost:8000/api/todo/deleteById/${currentUser.accessToken}`, {
-        data: {
-          _id: parameter._id,
-        }
-      });
+      await newRequest.delete(`todo/deleteById/${parameter._id}`);
       await fetchParameters();
     } catch (error) {
       console.error('Error deleting parameter:', error);
@@ -144,11 +130,7 @@ const MainPage = () => {
   };
 
   const editParameter = (parameter) => {
-    console.log(parameter);
     setEditMode(parameter._id);
-    setParameters(parameters.map(p =>
-      p._id === parameter._id ? { ...p, editData: { ...p } } : p
-    ));
   };
 
   const submitEditParameter = async (parameter) => {
@@ -156,14 +138,13 @@ const MainPage = () => {
       const todoInput = document.querySelector(`input[data-id="${parameter._id}"][data-field="todo"]`);
       const tagInput = document.querySelector(`input[data-id="${parameter._id}"][data-field="tag"]`);
 
-      const updatedParam = {
-        _id: parameter._id,
-        newTodo: {
-          todo: todoInput.value,
-          tag: tagInput.value
-        }
+
+      const newTodo = {
+        todo: todoInput.value,
+        tag: tagInput.value
       };
-      await axios.put(`http://localhost:8000/api/todo/editById`, updatedParam);
+
+      await newRequest.put(`todo/editById/${parameter._id}`, newTodo);
       setEditMode(null);
       await fetchTags();
       await fetchParameters();
@@ -174,7 +155,7 @@ const MainPage = () => {
 
   const handleSignOut = async () => {
     try {
-      await axios.post('http://localhost:8000/api/auth/logout');
+      await newRequest.post('auth/logout');
       localStorage.removeItem('currentUser');
       window.location.reload();
     } catch (err) {
@@ -190,7 +171,7 @@ const MainPage = () => {
   const handleDownload = async (filename) => {
     const downloadUrl = `http://localhost:8000/api/todo/downloadFile/${filename}`;
     try {
-      const response = await axios.get(downloadUrl, {
+      const response = await newRequest.get(downloadUrl, {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -257,7 +238,6 @@ const MainPage = () => {
             </thead>
             <tbody>
               {parameters.map(parameter => {
-                console.log('Parameter:', parameter);
                 return (
                   <tr key={parameter._id}>
                     {editMode === parameter._id ? (
